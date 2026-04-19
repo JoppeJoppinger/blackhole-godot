@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://shaders/accretion_disk.gdshader" id="1_accretion"]
+
+[resource]
+shader = ExtResource("1_accretion")
+shader_parameter/inner_radius = 0.09
+shader_parameter/outer_radius = 0.8
+shader_parameter/disk_thickness = 0.04
+shader_parameter/spin_direction = 1.0

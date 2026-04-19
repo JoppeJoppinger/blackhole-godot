@@ -1,0 +1,272 @@
+[gd_scene load_steps=18 format=3 uid="uid://main"]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/BlackHole.gd" id="2_bh"]
+[ext_resource type="Script" path="res://scripts/Spaceship.gd" id="3_ship"]
+[ext_resource type="Script" path="res://scripts/HUD.gd" id="4_hud"]
+[ext_resource type="Script" path="res://scripts/SpaceEnvironment.gd" id="5_env"]
+[ext_resource type="Shader" path="res://shaders/gravitational_lens.gdshader" id="6_lens"]
+[ext_resource type="Shader" path="res://shaders/starfield.gdshader" id="7_star"]
+[ext_resource type="Shader" path="res://shaders/accretion_disk.gdshader" id="8_disk"]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+ambient_light_source = 1
+ambient_light_color = Color(0.02, 0.02, 0.05, 1)
+ambient_light_energy = 0.5
+tonemap_mode = 2
+tonemap_exposure = 1.2
+glow_enabled = true
+glow_intensity = 0.4
+glow_bloom = 0.1
+
+[sub_resource type="SphereMesh" id="SphereMesh_BH"]
+radius = 0.0295
+height = 0.059
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_BH"]
+albedo_color = Color(0, 0, 0, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_Disk"]
+size = Vector2(2.0, 2.0)
+
+[sub_resource type="ShaderMaterial" id="Mat_Accretion"]
+shader = ExtResource("8_disk")
+shader_parameter/inner_radius = 0.09
+shader_parameter/outer_radius = 0.8
+shader_parameter/disk_thickness = 0.04
+shader_parameter/spin_direction = 1.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_Sky"]
+radius = 500.0
+height = 1000.0
+radial_segments = 8
+rings = 4
+flip_faces = true
+
+[sub_resource type="ShaderMaterial" id="Mat_Starfield"]
+shader = ExtResource("7_star")
+shader_parameter/ship_speed_fraction = 0.0
+shader_parameter/ship_velocity_dir = Vector3(0, 0, -1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_Ship"]
+size = Vector3(1.5, 0.6, 4.0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_Ship"]
+albedo_color = Color(0.3, 0.35, 0.4, 1)
+metallic = 0.8
+roughness = 0.2
+emission_enabled = true
+emission = Color(0.0, 0.2, 0.5, 1)
+emission_energy_multiplier = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_Lens"]
+shader = ExtResource("6_lens")
+shader_parameter/bh_screen_pos = Vector2(0.5, 0.5)
+shader_parameter/bh_radius_screen = 0.015
+shader_parameter/photon_sphere_screen = 0.025
+shader_parameter/lens_strength = 1.0
+
+[sub_resource type="ParticleProcessMaterial" id="PPMat_Exhaust"]
+direction = Vector3(0, 0, 1)
+spread = 10.0
+initial_velocity_min = 5.0
+initial_velocity_max = 15.0
+gravity = Vector3(0, 0, 0)
+color = Color(0.3, 0.6, 1.0, 1.0)
+scale_min = 0.05
+scale_max = 0.15
+
+[sub_resource type="ParticleProcessMaterial" id="PPMat_Jet"]
+direction = Vector3(0, 1, 0)
+spread = 5.0
+initial_velocity_min = 10.0
+initial_velocity_max = 30.0
+gravity = Vector3(0, 0, 0)
+color = Color(0.4, 0.7, 1.0, 0.8)
+scale_min = 0.05
+scale_max = 0.2
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="SpaceEnvironment" type="Node3D" parent="."]
+script = ExtResource("5_env")
+
+[node name="StarfieldMesh" type="MeshInstance3D" parent="SpaceEnvironment"]
+mesh = SubResource("SphereMesh_Sky")
+surface_material_override/0 = SubResource("Mat_Starfield")
+
+[node name="BlackHole" type="Node3D" parent="."]
+script = ExtResource("2_bh")
+
+[node name="EventHorizonMesh" type="MeshInstance3D" parent="BlackHole"]
+mesh = SubResource("SphereMesh_BH")
+surface_material_override/0 = SubResource("Mat_BH")
+
+[node name="AccretionDiskMesh" type="MeshInstance3D" parent="BlackHole"]
+transform = Transform3D(1, 0, 0, 0, 0.02, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("QuadMesh_Disk")
+surface_material_override/0 = SubResource("Mat_Accretion")
+
+[node name="RelativisticJet1" type="GPUParticles3D" parent="BlackHole"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+amount = 200
+process_material = SubResource("PPMat_Jet")
+visibility_aabb = AABB(-5, -10, -5, 10, 20, 10)
+
+[node name="RelativisticJet2" type="GPUParticles3D" parent="BlackHole"]
+transform = Transform3D(1, 0, 0, 0, -1, 0, 0, 0, -1, 0, -1.5, 0)
+amount = 200
+process_material = SubResource("PPMat_Jet")
+visibility_aabb = AABB(-5, -10, -5, 10, 20, 10)
+
+[node name="Spaceship" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 30)
+script = ExtResource("3_ship")
+
+[node name="ShipMesh" type="MeshInstance3D" parent="Spaceship"]
+mesh = SubResource("BoxMesh_Ship")
+surface_material_override/0 = SubResource("Mat_Ship")
+
+[node name="ChaseCamera" type="Camera3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 0.93969, 0.34202, 0, -0.34202, 0.93969, 0, 8, 18)
+current = true
+fov = 75.0
+
+[node name="CockpitCamera" type="Camera3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 1.0)
+current = false
+fov = 90.0
+
+[node name="ExhaustParticles" type="GPUParticles3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.2)
+emitting = false
+amount = 64
+process_material = SubResource("PPMat_Exhaust")
+visibility_aabb = AABB(-2, -2, -2, 4, 4, 10)
+
+[node name="PostProcess" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="LensRect" type="ColorRect" parent="PostProcess"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+material = SubResource("Mat_Lens")
+mouse_filter = 2
+
+[node name="HUD" type="CanvasLayer" parent="."]
+layer = 20
+script = ExtResource("4_hud")
+
+[node name="Panel" type="Panel" parent="HUD"]
+anchors_preset = 0
+offset_right = 440.0
+offset_bottom = 440.0
+self_modulate = Color(0, 0, 0, 0.65)
+
+[node name="VBox" type="VBoxContainer" parent="HUD/Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+
+[node name="Title" type="Label" parent="HUD/Panel/VBox"]
+text = "═══ BLACK HOLE TELEMETRY ═══"
+theme_override_colors/font_color = Color(0, 1, 0.8, 1)
+
+[node name="Distance" type="Label" parent="HUD/Panel/VBox"]
+text = "Distance to EH: ---"
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+
+[node name="Speed" type="Label" parent="HUD/Panel/VBox"]
+text = "Speed: ---"
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+
+[node name="EscapeVelocity" type="Label" parent="HUD/Panel/VBox"]
+text = "Escape velocity: ---"
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+
+[node name="CanEscape" type="Label" parent="HUD/Panel/VBox"]
+text = "Status: ---"
+theme_override_colors/font_color = Color(0, 1, 0, 1)
+
+[node name="Sep1" type="HSeparator" parent="HUD/Panel/VBox"]
+
+[node name="ShipTime" type="Label" parent="HUD/Panel/VBox"]
+text = "Ship time: 00:00:00.000"
+theme_override_colors/font_color = Color(0.6, 1, 0.6, 1)
+
+[node name="UniversalTime" type="Label" parent="HUD/Panel/VBox"]
+text = "Univ time: 00:00:00.000"
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+
+[node name="Sep2" type="HSeparator" parent="HUD/Panel/VBox"]
+
+[node name="Integrity" type="Label" parent="HUD/Panel/VBox"]
+text = "Integrity: 100.0%"
+theme_override_colors/font_color = Color(0, 1, 0.5, 1)
+
+[node name="IntegrityBar" type="ProgressBar" parent="HUD/Panel/VBox"]
+max_value = 100.0
+value = 100.0
+custom_minimum_size = Vector2(0, 14)
+
+[node name="TidalStress" type="Label" parent="HUD/Panel/VBox"]
+text = "Tidal stress: ---"
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+
+[node name="GravAccel" type="Label" parent="HUD/Panel/VBox"]
+text = "Grav accel: ---"
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+
+[node name="Redshift" type="Label" parent="HUD/Panel/VBox"]
+text = "Redshift z: ---"
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+
+[node name="Controls" type="Label" parent="HUD/Panel/VBox"]
+text = "W=Thrust  S=Brake  Mouse=Aim  Q/E=Roll  V=Cam  Esc=Mouse"
+theme_override_colors/font_color = Color(0.5, 0.6, 0.7, 1)
+autowrap_mode = 3
+
+[node name="Warning" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -40.0
+offset_right = 280.0
+offset_bottom = 40.0
+text = "⚠ POINT OF NO RETURN — PHOTON SPHERE ⚠"
+theme_override_colors/font_color = Color(1, 0.3, 0, 1)
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+
+[node name="EventHorizonCountdown" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 6
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -60.0
+offset_right = 300.0
+offset_bottom = -10.0
+text = "EVENT HORIZON IN --- km"
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
