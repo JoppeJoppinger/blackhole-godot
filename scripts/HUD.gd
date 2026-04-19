@@ -25,6 +25,10 @@ var pulse_time: float = 0.0
 @onready var lbl_event_horizon: Label = $EventHorizonCountdown
 @onready var integrity_bar: ProgressBar = $Panel/VBox/IntegrityBar
 
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_hud"):
+		$Panel.visible = not $Panel.visible
+
 func _process(delta: float) -> void:
 	if spaceship == null or black_hole == null:
 		return

@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://main"]
+[gd_scene load_steps=28 format=3 uid="uid://main"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/BlackHole.gd" id="2_bh"]
@@ -8,6 +8,8 @@
 [ext_resource type="Shader" path="res://shaders/gravitational_lens.gdshader" id="6_lens"]
 [ext_resource type="Shader" path="res://shaders/starfield.gdshader" id="7_star"]
 [ext_resource type="Shader" path="res://shaders/accretion_disk.gdshader" id="8_disk"]
+[ext_resource type="Script" path="res://scripts/Cockpit.gd" id="9_cockpit"]
+[ext_resource type="Script" path="res://scripts/SoundManager.gd" id="10_sound"]
 
 [sub_resource type="Environment" id="Env_1"]
 background_mode = 1
@@ -18,8 +20,9 @@ ambient_light_energy = 0.5
 tonemap_mode = 2
 tonemap_exposure = 1.2
 glow_enabled = true
-glow_intensity = 0.4
-glow_bloom = 0.1
+glow_intensity = 0.6
+glow_bloom = 0.15
+glow_hdr_threshold = 0.8
 
 [sub_resource type="SphereMesh" id="SphereMesh_BH"]
 radius = 0.0295
@@ -29,9 +32,26 @@ rings = 16
 
 [sub_resource type="StandardMaterial3D" id="Mat_BH"]
 albedo_color = Color(0, 0, 0, 1)
+shading_mode = 0
 
-[sub_resource type="QuadMesh" id="QuadMesh_Disk"]
-size = Vector2(2.0, 2.0)
+[sub_resource type="TorusMesh" id="TorusMesh_Photon"]
+inner_radius = 0.002
+outer_radius = 0.0443
+rings = 64
+ring_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_Photon"]
+albedo_color = Color(1.0, 0.85, 0.5, 1)
+emission_enabled = true
+emission = Color(1.0, 0.85, 0.5, 1)
+emission_energy_multiplier = 8.0
+shading_mode = 0
+
+[sub_resource type="TorusMesh" id="TorusMesh_Disk"]
+inner_radius = 0.09
+outer_radius = 0.8
+rings = 128
+ring_segments = 4
 
 [sub_resource type="ShaderMaterial" id="Mat_Accretion"]
 shader = ExtResource("8_disk")
@@ -51,17 +71,6 @@ flip_faces = true
 shader = ExtResource("7_star")
 shader_parameter/ship_speed_fraction = 0.0
 shader_parameter/ship_velocity_dir = Vector3(0, 0, -1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_Ship"]
-size = Vector3(1.5, 0.6, 4.0)
-
-[sub_resource type="StandardMaterial3D" id="Mat_Ship"]
-albedo_color = Color(0.3, 0.35, 0.4, 1)
-metallic = 0.8
-roughness = 0.2
-emission_enabled = true
-emission = Color(0.0, 0.2, 0.5, 1)
-emission_energy_multiplier = 0.3
 
 [sub_resource type="ShaderMaterial" id="Mat_Lens"]
 shader = ExtResource("6_lens")
@@ -90,6 +99,10 @@ color = Color(0.4, 0.7, 1.0, 0.8)
 scale_min = 0.05
 scale_max = 0.2
 
+[sub_resource type="ArrayMesh" id="ArrayMesh_CockpitPlaceholder"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_HullPlaceholder"]
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 
@@ -110,47 +123,84 @@ script = ExtResource("2_bh")
 mesh = SubResource("SphereMesh_BH")
 surface_material_override/0 = SubResource("Mat_BH")
 
-[node name="AccretionDiskMesh" type="MeshInstance3D" parent="BlackHole"]
-transform = Transform3D(1, 0, 0, 0, 0.02, 0, 0, 0, 1, 0, 0, 0)
-mesh = SubResource("QuadMesh_Disk")
+[node name="PhotonRing" type="MeshInstance3D" parent="BlackHole"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
+mesh = SubResource("TorusMesh_Photon")
+surface_material_override/0 = SubResource("Mat_Photon")
+
+[node name="AccretionDisk" type="MeshInstance3D" parent="BlackHole"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
+mesh = SubResource("TorusMesh_Disk")
 surface_material_override/0 = SubResource("Mat_Accretion")
 
-[node name="RelativisticJet1" type="GPUParticles3D" parent="BlackHole"]
+[node name="JetNorth" type="GPUParticles3D" parent="BlackHole"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 amount = 200
 process_material = SubResource("PPMat_Jet")
 visibility_aabb = AABB(-5, -10, -5, 10, 20, 10)
 
-[node name="RelativisticJet2" type="GPUParticles3D" parent="BlackHole"]
+[node name="JetSouth" type="GPUParticles3D" parent="BlackHole"]
 transform = Transform3D(1, 0, 0, 0, -1, 0, 0, 0, -1, 0, -1.5, 0)
 amount = 200
 process_material = SubResource("PPMat_Jet")
 visibility_aabb = AABB(-5, -10, -5, 10, 20, 10)
 
+[node name="HawkingGlow" type="OmniLight3D" parent="BlackHole"]
+light_color = Color(0.6, 0.5, 0.3, 1)
+light_energy = 0.3
+omni_range = 0.5
+
 [node name="Spaceship" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 30)
 script = ExtResource("3_ship")
 
-[node name="ShipMesh" type="MeshInstance3D" parent="Spaceship"]
-mesh = SubResource("BoxMesh_Ship")
-surface_material_override/0 = SubResource("Mat_Ship")
+[node name="HullMesh" type="MeshInstance3D" parent="Spaceship"]
+mesh = SubResource("ArrayMesh_HullPlaceholder")
 
-[node name="ChaseCamera" type="Camera3D" parent="Spaceship"]
-transform = Transform3D(1, 0, 0, 0, 0.93969, 0.34202, 0, -0.34202, 0.93969, 0, 8, 18)
-current = true
-fov = 75.0
+[node name="EngineGlowL" type="OmniLight3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, -0.1, 1.8)
+light_color = Color(0.3, 0.6, 1.0, 1)
+light_energy = 2.0
+omni_range = 1.5
 
-[node name="CockpitCamera" type="Camera3D" parent="Spaceship"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 1.0)
+[node name="EngineGlowR" type="OmniLight3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, -0.1, 1.8)
+light_color = Color(0.3, 0.6, 1.0, 1)
+light_energy = 2.0
+omni_range = 1.5
+
+[node name="ExhaustL" type="GPUParticles3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, -0.1, 2.0)
+emitting = false
+amount = 48
+process_material = SubResource("PPMat_Exhaust")
+visibility_aabb = AABB(-2, -2, -2, 4, 4, 10)
+
+[node name="ExhaustR" type="GPUParticles3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, -0.1, 2.0)
+emitting = false
+amount = 48
+process_material = SubResource("PPMat_Exhaust")
+visibility_aabb = AABB(-2, -2, -2, 4, 4, 10)
+
+[node name="CockpitNode" type="Node3D" parent="Spaceship"]
+script = ExtResource("9_cockpit")
+
+[node name="CockpitMesh" type="MeshInstance3D" parent="Spaceship/CockpitNode"]
+mesh = SubResource("ArrayMesh_CockpitPlaceholder")
+
+[node name="CockpitCamera" type="Camera3D" parent="Spaceship/CockpitNode"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0.5)
 current = false
 fov = 90.0
 
-[node name="ExhaustParticles" type="GPUParticles3D" parent="Spaceship"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.2)
-emitting = false
-amount = 64
-process_material = SubResource("PPMat_Exhaust")
-visibility_aabb = AABB(-2, -2, -2, 4, 4, 10)
+[node name="ChaseCamera" type="Camera3D" parent="Spaceship"]
+transform = Transform3D(1, 0, 0, 0, 0.93969, 0.34202, 0, -0.34202, 0.93969, 0, 8, 20)
+current = true
+fov = 75.0
+
+[node name="SoundManager" type="Node" parent="."]
+script = ExtResource("10_sound")
 
 [node name="PostProcess" type="CanvasLayer" parent="."]
 layer = 10
@@ -235,7 +285,7 @@ text = "Redshift z: ---"
 theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
 
 [node name="Controls" type="Label" parent="HUD/Panel/VBox"]
-text = "W=Thrust  S=Brake  Mouse=Aim  Q/E=Roll  V=Cam  Esc=Mouse"
+text = "W=Thrust  S=Brake  A/D=Strafe  Q/E=Roll  Shift=Boost  Space=Kill  V=Cam  H=HUD  Esc=Cursor"
 theme_override_colors/font_color = Color(0.5, 0.6, 0.7, 1)
 autowrap_mode = 3
 
