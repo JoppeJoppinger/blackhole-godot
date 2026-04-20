@@ -6,10 +6,12 @@ extends Node3D
 
 var head_bob_time: float = 0.0
 var head_bob_intensity: float = 0.0
-var base_camera_pos: Vector3 = Vector3(0.0, 0.35, 0.5)
+var base_camera_pos: Vector3 = Vector3(0.0, 0.12, 0.08)
 
 func _ready() -> void:
 	_build_cockpit_mesh()
+	cockpit_camera.near = 0.05
+	_build_throttle_lever()
 
 func _build_cockpit_mesh() -> void:
 	var arr_mesh = ArrayMesh.new()
@@ -135,6 +137,7 @@ func _build_cockpit_mesh() -> void:
 	mat.emission_energy_multiplier = 1.2
 	cockpit_mesh.mesh = arr_mesh
 	cockpit_mesh.set_surface_override_material(0, mat)
+	cockpit_mesh.position = Vector3(0, -0.1, -0.4)
 
 	# Screen glow lights
 	var light_colors = [Color(0.0, 0.5, 1.0), Color(0.0, 0.8, 0.5), Color(0.3, 0.0, 0.8)]
@@ -207,3 +210,32 @@ func update_camera_bob(delta: float, tidal_g: float) -> void:
 
 func get_camera() -> Camera3D:
 	return cockpit_camera
+
+var throttle_lever: MeshInstance3D = null
+var throttle_fraction: float = 0.0
+
+func _build_throttle_lever() -> void:
+	throttle_lever = MeshInstance3D.new()
+	var arr_mesh = ArrayMesh.new()
+	var verts: PackedVector3Array = PackedVector3Array()
+	var normals: PackedVector3Array = PackedVector3Array()
+	var colors: PackedColorArray = PackedColorArray()
+	# lever base
+	_add_box(verts, normals, colors, Vector3(0.82, -0.28, -0.15), Vector3(0.90, -0.26, -0.05), Color(0.15, 0.15, 0.15))
+	# lever handle
+	_add_box(verts, normals, colors, Vector3(0.84, -0.28, -0.12), Vector3(0.88, -0.10, -0.08), Color(0.8, 0.2, 0.1))
+	var arrays = []; arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mat = StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	throttle_lever.mesh = arr_mesh
+	throttle_lever.set_surface_override_material(0, mat)
+	add_child(throttle_lever)
+
+func set_thrust_visual(fraction: float) -> void:
+	throttle_fraction = lerp(throttle_fraction, fraction, 0.1)
+	if throttle_lever:
+		throttle_lever.position.z = lerp(0.0, -0.15, throttle_fraction)

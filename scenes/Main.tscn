@@ -112,10 +112,6 @@ environment = SubResource("Env_1")
 [node name="SpaceEnvironment" type="Node3D" parent="."]
 script = ExtResource("5_env")
 
-[node name="StarfieldMesh" type="MeshInstance3D" parent="SpaceEnvironment"]
-mesh = SubResource("SphereMesh_Sky")
-surface_material_override/0 = SubResource("Mat_Starfield")
-
 [node name="BlackHole" type="Node3D" parent="."]
 script = ExtResource("2_bh")
 

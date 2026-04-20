@@ -13,8 +13,8 @@ var velocity: Vector3 = Vector3.ZERO
 var structural_integrity: float = 100.0
 var ship_time: float = 0.0
 var universal_time: float = 0.0
-var thrust_power: float = 50.0
-var rotation_speed: float = 1.5
+var thrust_power: float = 4.0
+var rotation_speed: float = 0.8
 var is_cockpit_camera: bool = false
 var black_hole: Node3D = null
 var sound_manager: Node = null
@@ -287,6 +287,7 @@ func _physics_process(delta: float) -> void:
 	if speed_ms > C * 0.99:
 		velocity = velocity.normalized() * (C * 0.99 / SCALE)
 
+	velocity *= 0.998
 	global_position += velocity * delta
 
 	# Time dilation
