@@ -22,10 +22,8 @@ var is_thrusting: bool = false
 var is_boosting: bool = false
 var engines_killed: bool = false
 
-# Mouse look for cockpit camera
+# Mouse look
 var mouse_delta: Vector2 = Vector2.ZERO
-var cockpit_yaw: float = 0.0
-var cockpit_pitch: float = 0.0
 
 @onready var chase_cam: Camera3D = $ChaseCamera
 @onready var cockpit_node: Node3D = $CockpitNode
@@ -177,9 +175,6 @@ func _input(event: InputEvent) -> void:
 		chase_cam.current = !is_cockpit_camera
 		if cockpit_node:
 			cockpit_node.get_camera().current = is_cockpit_camera
-		# reset mouse look
-		cockpit_yaw = 0.0
-		cockpit_pitch = 0.0
 	if event.is_action_pressed("ui_cancel"):
 		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
@@ -190,17 +185,10 @@ func _physics_process(delta: float) -> void:
 	if black_hole == null:
 		return
 
-	# Mouse rotation
+	# Mouse rotation - always steers the ship
 	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		if is_cockpit_camera:
-			# Mouse look: move virtual camera, limited to ±30°
-			cockpit_yaw   = clamp(cockpit_yaw   - mouse_delta.x * 0.002, -PI/6.0, PI/6.0)
-			cockpit_pitch = clamp(cockpit_pitch - mouse_delta.y * 0.002, -PI/6.0, PI/6.0)
-			if cockpit_node:
-				cockpit_node.get_camera().rotation = Vector3(cockpit_pitch, cockpit_yaw, 0)
-		else:
-			rotate_y(-mouse_delta.x * 0.002)
-			rotate_object_local(Vector3.RIGHT, -mouse_delta.y * 0.002)
+		rotate_y(-mouse_delta.x * 0.002)
+		rotate_object_local(Vector3.RIGHT, -mouse_delta.y * 0.002)
 	mouse_delta = Vector2.ZERO
 
 	# Keyboard roll
